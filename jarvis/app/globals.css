@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #000000;
+  --color-surface: #080808;
+  --color-text: #ffffff;
+  --color-text-soft: #a3a3a3;
+  --color-brand: #ffffff;
+  --color-brand-contrast: #000000;
+  --color-border: #1f1f1f;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-surface: var(--color-surface);
+  --color-text-soft: var(--color-text-soft);
+  --color-brand: var(--color-brand);
+  --color-brand-contrast: var(--color-brand-contrast);
+  --color-border: var(--color-border);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 10%, #101010 0%, transparent 34%),
+    radial-gradient(circle at 85% 0%, #111111 0%, transparent 36%),
+    var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+}
+
+.landing-particle {
+  position: absolute;
+  top: -4%;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 62%);
+  box-shadow: 0 0 14px rgb(255 255 255 / 45%);
+  animation-name: landingParticleDrift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.landing-particle--extra {
+  opacity: 0;
+}
+
+.particle-boost .landing-particle {
+  animation-duration: 1.8s !important;
+  opacity: 0.95;
+  box-shadow: 0 0 16px rgb(255 255 255 / 60%);
+}
+
+.particle-boost .landing-particle--extra {
+  opacity: 0.9;
+}
+
+@keyframes landingParticleDrift {
+  0% {
+    transform: translateY(-6vh) translateX(0) scale(0.75);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.75;
+  }
+
+  100% {
+    transform: translateY(108vh) translateX(var(--particle-drift-x, -18px)) scale(1);
+    opacity: 0;
+  }
+}
