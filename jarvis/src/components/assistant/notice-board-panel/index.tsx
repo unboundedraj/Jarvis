@@ -113,22 +113,27 @@ export function NoticeBoardPanel() {
         {syncStatus === "idle" && ""}
       </p>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-auto pr-1 text-left">
+      <div className="min-h-0 flex-1 overflow-auto pr-1">
         {notes.length > 0 ? (
-          notes.map((note) => (
-            <div key={note.id} className="rounded-xl border border-border bg-black/25 p-3 sm:p-4">
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-xs leading-6 text-white sm:text-sm">{note.text}</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className="relative aspect-square flex flex-col gap-2 rounded-xl border border-border bg-black/25 p-3 transition hover:bg-black/35"
+              >
+                <p className="flex-1 text-xs leading-4 text-white overflow-auto line-clamp-6">
+                  {note.text}
+                </p>
                 <button
                   type="button"
                   onClick={() => deleteStickyNote(note.id)}
-                  className="rounded-lg border border-border px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-text-soft transition hover:border-white hover:text-white"
+                  className="w-full rounded-lg border border-border px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-text-soft transition hover:border-red-500 hover:text-red-500"
                 >
                   Delete
                 </button>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         ) : (
           <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border p-4 text-center text-xs uppercase tracking-[0.18em] text-text-soft">
             No pinned notes yet.
