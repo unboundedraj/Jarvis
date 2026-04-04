@@ -4,8 +4,8 @@ import { WorkspacePanel } from "@/components/assistant/workspace-panel";
 
 export function AssistantShell() {
   return (
-    <section className="grid h-full min-h-0 grid-cols-1 grid-rows-3 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 lg:gap-5 lg:items-stretch">
-      <div className="grid min-h-0 grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4 lg:gap-5">
+    <section className="grid h-full min-h-0 grid-cols-1 grid-rows-3 gap-2 lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-1 lg:gap-3 lg:items-stretch">
+      <div className="grid min-h-0 grid-rows-[minmax(0,1.6fr)_minmax(0,1fr)] gap-2 lg:gap-3">
         <WorkspacePanel />
         <NoticeBoardPanel />
       </div>
