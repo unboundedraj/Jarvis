@@ -51,9 +51,10 @@ export function AssistantHeader() {
           return;
         }
 
-        const data = (await response.json()) as { about?: string };
+        const data = (await response.json()) as { about?: string; energyLevel?: EnergyLevel };
 
         setProfile({ about: data.about ?? "" });
+        setEnergyLevel(data.energyLevel ?? 5);
         setDraftAbout(data.about ?? "");
       } catch {
         // Ignore initial fetch errors and allow local interaction.
@@ -143,6 +144,7 @@ export function AssistantHeader() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           about: profile.about,
+          energyLevel,
         }),
       });
 

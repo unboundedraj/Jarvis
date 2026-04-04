@@ -66,6 +66,7 @@ npm run dev
 - Add new keys to `.env.example` with safe placeholder values.
 - Planned backend storage will use MongoDB Atlas via `MONGODB_URI`.
 - Protect the assistant route with `JARVIS_ACCESS_PIN`; set a unique value in your local environment before deploying or sharing the app.
+- AI Assist prioritization uses Groq via `GROQ_API_KEY` (required) and `GROQ_MODEL` (optional, defaults to `llama-3.3-70b-versatile`).
 - Each deployment should use its own `MONGODB_URI` and `JARVIS_ACCESS_PIN`.
 
 ## Task Schema
@@ -113,6 +114,35 @@ assistant_notice_board
 Each section (`Assistant Header`, `Workspace`, and `Notice Board`) provides an explicit `Sync` action in the UI to persist current local state.
 
 Workspace tasks are now auto-saved to MongoDB when they are created, updated with notes, or marked done. The Sync button still exists as a manual fallback.
+
+## AI Assist (Groq)
+
+The AI Assist panel can prioritize workspace tasks based on:
+
+- Header profile (`about`)
+- Header energy level (`0-10`)
+- All workspace tasks (deadline, expected time, tags, notes)
+- Optional user remarks entered in AI Assist
+
+When you click "Prioritize Workspace", JARVIS calls Groq, parses the ranked output, then reorders tasks automatically (top task = do now).
+
+### Groq API Key Setup
+
+1. Sign in to Groq console.
+2. Create a new API key in the API keys section.
+3. Add the key to `.env.local`:
+
+```bash
+GROQ_API_KEY=your_real_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+4. Restart the dev server after updating env vars.
+
+Security notes:
+
+- Keep `GROQ_API_KEY` server-side only.
+- Do not expose keys in client components or browser logs.
 
 ## Access Control
 

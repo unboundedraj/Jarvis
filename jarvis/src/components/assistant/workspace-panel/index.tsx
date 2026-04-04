@@ -8,6 +8,8 @@ import { TaskDialog } from "./task-dialog";
 import { TaskNoteDialog } from "./task-note-dialog";
 import { TaskRow } from "./task-row";
 
+const WORKSPACE_TASKS_REPLACED_EVENT = "workspace:tasks-replaced";
+
 const INITIAL_DRAFT: TaskDraft = {
   task: "",
   deadline: "",
@@ -66,6 +68,25 @@ export function WorkspacePanel() {
     };
 
     void fetchWorkspaceState();
+  }, []);
+
+  useEffect(() => {
+    const handleTasksReplaced = (event: Event) => {
+      const customEvent = event as CustomEvent<{ tasks?: Task[] }>;
+      const nextTasks = customEvent.detail?.tasks;
+
+      if (!Array.isArray(nextTasks)) {
+        return;
+      }
+
+      setTasks(nextTasks);
+    };
+
+    window.addEventListener(WORKSPACE_TASKS_REPLACED_EVENT, handleTasksReplaced);
+
+    return () => {
+      window.removeEventListener(WORKSPACE_TASKS_REPLACED_EVENT, handleTasksReplaced);
+    };
   }, []);
 
   const activeTask = useMemo(

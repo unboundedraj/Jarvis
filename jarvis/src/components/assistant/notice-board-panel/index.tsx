@@ -115,19 +115,19 @@ export function NoticeBoardPanel() {
 
       <div className="min-h-0 flex-1 overflow-auto pr-1">
         {notes.length > 0 ? (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
             {notes.map((note) => (
               <div
                 key={note.id}
-                className="relative aspect-square flex flex-col gap-2 rounded-xl border border-border bg-black/25 p-3 transition hover:bg-black/35"
+                className="relative aspect-square flex flex-col gap-1.5 rounded-xl border border-border bg-black/25 p-2 transition hover:bg-black/35"
               >
-                <p className="flex-1 text-xs leading-4 text-white overflow-auto line-clamp-6">
+                <p className="flex-1 overflow-auto text-[10px] leading-3.5 text-white line-clamp-6">
                   {note.text}
                 </p>
                 <button
                   type="button"
                   onClick={() => deleteStickyNote(note.id)}
-                  className="w-full rounded-lg border border-border px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-text-soft transition hover:border-red-500 hover:text-red-500"
+                  className="w-full rounded-lg border border-border px-1.5 py-1 text-[7px] uppercase tracking-[0.16em] text-text-soft transition hover:border-red-500 hover:text-red-500"
                 >
                   Delete
                 </button>

@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ASSISTANT_ACCESS_COOKIE, hasAssistantAccess } from "@/lib/assistant-access";
 import { getMongoDb } from "@/lib/mongodb";
+import { type EnergyLevel } from "@/types/assistant";
 
 type HeaderPayload = {
   about: string;
+  energyLevel: EnergyLevel;
 };
 
 type HeaderDoc = {
   _id: string;
   about: string;
+  energyLevel: EnergyLevel;
   createdAt: string;
   updatedAt: string;
 };
@@ -31,6 +34,7 @@ export async function GET() {
 
     return NextResponse.json({
       about: doc?.about ?? "",
+      energyLevel: doc?.energyLevel ?? 5,
     });
   } catch {
     return NextResponse.json({ message: "Failed to fetch header state." }, { status: 500 });
@@ -51,6 +55,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid about value." }, { status: 400 });
     }
 
+    if (
+      typeof payload.energyLevel !== "number" ||
+      !Number.isInteger(payload.energyLevel) ||
+      payload.energyLevel < 0 ||
+      payload.energyLevel > 10
+    ) {
+      return NextResponse.json({ message: "Invalid energy level." }, { status: 400 });
+    }
+
     const db = await getMongoDb();
     const collection = db.collection<HeaderDoc>(COLLECTION);
     await collection.updateOne(
@@ -58,6 +71,7 @@ export async function POST(request: Request) {
       {
         $set: {
           about: payload.about.trim(),
+          energyLevel: payload.energyLevel,
           updatedAt: new Date().toISOString(),
         },
         $setOnInsert: {
