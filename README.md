@@ -4,7 +4,7 @@ Joint Adaptive Real-time Virtual Intelligence System
 
 JARVIS is a personal assistant web application focused on helping users stay organized, focused, and productive. The codebase is built with scalability in mind so features can be added safely, one module at a time.
 
-This repository is currently set up for personal use. Anyone who wants to run their own copy should provide their own MongoDB Atlas database URI and their own access PIN in their local environment file.
+This repository is currently set up for personal use. Anyone who wants to run their own copy should provide their own MongoDB Atlas database URI and their own access PIN in their local environment file.And also use their own Groq account for using the ai assist feature.
 
 ## Current Status
 

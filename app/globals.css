@@ -105,3 +105,41 @@ a {
     opacity: 0;
   }
 }
+
+.ai-prioritize-orb {
+  white-space: pre-line;
+  border-color: var(--color-brand);
+  color: var(--color-brand-contrast);
+  background: var(--color-brand);
+  box-shadow: none;
+}
+
+.ai-prioritize-orb:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.04);
+  border-color: rgb(56 189 248 / 100%);
+  box-shadow:
+    0 0 0 1px rgb(56 189 248 / 42%) inset,
+    0 0 22px rgb(56 189 248 / 40%),
+    0 0 48px rgb(37 99 235 / 35%);
+}
+
+.ai-prioritize-orb:active:not(:disabled) {
+  transform: scale(0.96);
+  animation: aiOrbClickPulse 260ms ease-out;
+}
+
+@keyframes aiOrbClickPulse {
+  0% {
+    box-shadow:
+      0 0 0 1px rgb(56 189 248 / 45%) inset,
+      0 0 24px rgb(56 189 248 / 45%),
+      0 0 56px rgb(37 99 235 / 38%);
+  }
+
+  100% {
+    box-shadow:
+      0 0 0 1px rgb(56 189 248 / 25%) inset,
+      0 0 18px rgb(56 189 248 / 28%),
+      0 0 36px rgb(37 99 235 / 22%);
+  }
+}

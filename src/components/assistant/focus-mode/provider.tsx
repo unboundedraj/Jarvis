@@ -58,7 +58,7 @@ function FocusModeOverlay({
   const particles = useMemo(() => Array.from({ length: 34 }, (_, index) => index), []);
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-hidden bg-background">
+    <div className="fixed inset-0 z-100 overflow-hidden bg-background">
       <div className="pointer-events-none absolute inset-0">
         {particles.map((particle) => (
           <span

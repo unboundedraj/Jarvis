@@ -149,9 +149,9 @@ export function AiAssistSidebar() {
         type="button"
         onClick={askGroqToPrioritize}
         disabled={status === "loading"}
-        className="mt-3 w-full rounded-xl border border-brand bg-brand px-3 py-2 text-[10px] uppercase tracking-[0.18em] text-brand-contrast transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="ai-prioritize-orb mt-4 inline-flex h-36 w-36 items-center justify-center rounded-full border text-center text-[10px] uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-60 sm:h-40 sm:w-40"
       >
-        {status === "loading" ? "Analyzing..." : "Prioritize Workspace"}
+        {status === "loading" ? "Analyzing..." : "Prioritize\nWorkspace"}
       </button>
 
       <p className="mt-2 min-h-4 text-[10px] uppercase tracking-[0.14em] text-text-soft">
