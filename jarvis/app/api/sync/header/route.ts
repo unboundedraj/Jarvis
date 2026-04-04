@@ -7,6 +7,13 @@ type HeaderPayload = {
   about: string;
 };
 
+type HeaderDoc = {
+  _id: string;
+  about: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 const COLLECTION = "assistant_header";
 const DOC_ID = "primary";
 
@@ -19,7 +26,8 @@ export async function GET() {
     }
 
     const db = await getMongoDb();
-    const doc = await db.collection(COLLECTION).findOne<{ about: string }>({ _id: DOC_ID });
+    const collection = db.collection<HeaderDoc>(COLLECTION);
+    const doc = await collection.findOne({ _id: DOC_ID });
 
     return NextResponse.json({
       about: doc?.about ?? "",
@@ -44,7 +52,8 @@ export async function POST(request: Request) {
     }
 
     const db = await getMongoDb();
-    await db.collection(COLLECTION).updateOne(
+    const collection = db.collection<HeaderDoc>(COLLECTION);
+    await collection.updateOne(
       { _id: DOC_ID },
       {
         $set: {

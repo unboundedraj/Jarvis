@@ -80,3 +80,28 @@ a {
     opacity: 0;
   }
 }
+
+.focus-particle {
+  position: absolute;
+  bottom: -8%;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 55%);
+  box-shadow: 0 0 12px rgb(255 255 255 / 38%);
+  animation: focusParticleDrift linear infinite;
+}
+
+@keyframes focusParticleDrift {
+  0% {
+    transform: translateY(4vh) translateX(0) scale(0.6);
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 0.75;
+  }
+
+  100% {
+    transform: translateY(-112vh) translateX(var(--focus-particle-drift, 12px)) scale(1);
+    opacity: 0;
+  }
+}

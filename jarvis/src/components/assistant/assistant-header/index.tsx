@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { APP_NAME } from "@/constants/branding";
+import { useFocusMode } from "@/components/assistant/focus-mode/provider";
 import { orbitron } from "@/lib/fonts";
 import { type AssistantProfile, type EnergyLevel } from "@/types/assistant";
 import { EnergyDialog } from "./energy-dialog";
@@ -12,14 +13,14 @@ const INITIAL_PROFILE: AssistantProfile = {
 };
 
 function formatSystemTime(date: Date) {
-  return date.toLocaleTimeString([], {
+  return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
 function formatSystemDate(date: Date) {
-  return date.toLocaleDateString([], {
+  return date.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "2-digit",
@@ -27,19 +28,20 @@ function formatSystemDate(date: Date) {
 }
 
 export function AssistantHeader() {
+  const { startFocusMode } = useFocusMode();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEnergyOpen, setIsEnergyOpen] = useState(false);
+  const [isCustomFocusOpen, setIsCustomFocusOpen] = useState(false);
   const [profile, setProfile] = useState<AssistantProfile>(INITIAL_PROFILE);
   const [energyLevel, setEnergyLevel] = useState<EnergyLevel>(5);
   const [draftAbout, setDraftAbout] = useState(profile.about);
+  const [focusTaskName, setFocusTaskName] = useState("");
+  const [focusDeadline, setFocusDeadline] = useState("");
+  const [focusExpectedTime, setFocusExpectedTime] = useState("");
+  const [focusTags, setFocusTags] = useState("");
+  const [focusNotes, setFocusNotes] = useState("");
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
-  const [systemDateTime, setSystemDateTime] = useState(() => {
-    const now = new Date();
-    return {
-      time: formatSystemTime(now),
-      date: formatSystemDate(now),
-    };
-  });
+  const [systemDateTime, setSystemDateTime] = useState<{ time: string; date: string } | null>(null);
 
   useEffect(() => {
     const fetchHeaderState = async () => {
@@ -87,6 +89,42 @@ export function AssistantHeader() {
     setIsEnergyOpen(true);
   };
 
+  const openCustomFocusDialog = () => {
+    setIsCustomFocusOpen(true);
+  };
+
+  const closeCustomFocusDialog = () => {
+    setIsCustomFocusOpen(false);
+  };
+
+  const startCustomFocusMode = () => {
+    const taskName = focusTaskName.trim();
+
+    if (!taskName) {
+      return;
+    }
+
+    const parsedTags = focusTags
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    startFocusMode({
+      taskName,
+      deadline: focusDeadline || undefined,
+      expectedTime: focusExpectedTime.trim() || undefined,
+      tags: parsedTags,
+      notes: focusNotes.trim() || undefined,
+    });
+
+    setIsCustomFocusOpen(false);
+    setFocusTaskName("");
+    setFocusDeadline("");
+    setFocusExpectedTime("");
+    setFocusTags("");
+    setFocusNotes("");
+  };
+
   const saveProfile = () => {
     setProfile({ about: draftAbout.trim() });
     setIsProfileOpen(false);
@@ -122,8 +160,12 @@ export function AssistantHeader() {
     <>
       <header className="relative shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-4">
         <div className="absolute right-3 top-3 text-right sm:right-4 sm:top-4">
-          <p className="text-[10px] uppercase tracking-[0.2em] text-text-soft">{systemDateTime.time}</p>
-          <p className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-text-soft/85">{systemDateTime.date}</p>
+          <p suppressHydrationWarning className="text-[10px] uppercase tracking-[0.2em] text-text-soft">
+            {systemDateTime?.time ?? "--:--"}
+          </p>
+          <p suppressHydrationWarning className="mt-0.5 text-[10px] uppercase tracking-[0.16em] text-text-soft/85">
+            {systemDateTime?.date ?? "---, --- --"}
+          </p>
         </div>
         <div className="flex flex-col items-center gap-2">
           <h1
@@ -163,6 +205,17 @@ export function AssistantHeader() {
             </button>
             <button
               type="button"
+              onClick={openCustomFocusDialog}
+              className="inline-flex h-9 w-9 items-center justify-center border border-border text-text-soft transition hover:border-white hover:text-white"
+              aria-label="Start custom focus mode"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <circle cx="12" cy="12" r="7" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <button
+              type="button"
               onClick={syncHeaderState}
               className="inline-flex h-9 items-center justify-center border border-brand bg-brand px-3 text-[10px] uppercase tracking-[0.18em] text-brand-contrast transition hover:opacity-90"
               aria-label="Sync header information"
@@ -193,6 +246,94 @@ export function AssistantHeader() {
         onLevelChange={setEnergyLevel}
         onSave={saveEnergy}
       />
+
+      {isCustomFocusOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+          <div className="w-full max-w-xl rounded-2xl border border-border bg-surface p-4 shadow-2xl sm:p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold uppercase tracking-widest text-brand">
+                Custom Focus Mode
+              </h3>
+              <button
+                type="button"
+                onClick={closeCustomFocusDialog}
+                className="text-xs uppercase tracking-[0.2em] text-text-soft transition hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="block text-xs uppercase tracking-[0.18em] text-text-soft">Task Name</span>
+                <input
+                  value={focusTaskName}
+                  onChange={(event) => setFocusTaskName(event.target.value)}
+                  placeholder="What are you focusing on?"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-text-soft focus:border-brand"
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs uppercase tracking-[0.18em] text-text-soft">Deadline</span>
+                <input
+                  type="date"
+                  value={focusDeadline}
+                  onChange={(event) => setFocusDeadline(event.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-border bg-black/40 px-3 py-2 text-sm text-white outline-none transition focus:border-brand"
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs uppercase tracking-[0.18em] text-text-soft">Expected Time</span>
+                <input
+                  value={focusExpectedTime}
+                  onChange={(event) => setFocusExpectedTime(event.target.value)}
+                  placeholder="e.g. 45 mins"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-text-soft focus:border-brand"
+                />
+              </label>
+
+              <label className="block sm:col-span-2">
+                <span className="block text-xs uppercase tracking-[0.18em] text-text-soft">Tags</span>
+                <input
+                  value={focusTags}
+                  onChange={(event) => setFocusTags(event.target.value)}
+                  placeholder="Comma separated tags"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-text-soft focus:border-brand"
+                />
+              </label>
+
+              <label className="block sm:col-span-2">
+                <span className="block text-xs uppercase tracking-[0.18em] text-text-soft">Notes</span>
+                <textarea
+                  value={focusNotes}
+                  onChange={(event) => setFocusNotes(event.target.value)}
+                  placeholder="Any details for this focus session"
+                  className="mt-1.5 min-h-24 w-full resize-none rounded-xl border border-border bg-black/40 px-3 py-2 text-sm text-white outline-none transition placeholder:text-text-soft focus:border-brand"
+                />
+              </label>
+            </div>
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeCustomFocusDialog}
+                className="rounded-xl border border-border px-4 py-2 text-xs uppercase tracking-[0.18em] text-text-soft transition hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={startCustomFocusMode}
+                className="rounded-xl border border-brand bg-brand px-4 py-2 text-xs uppercase tracking-[0.18em] text-brand-contrast transition hover:opacity-90"
+              >
+                Start Focus
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

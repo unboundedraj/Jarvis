@@ -8,6 +8,13 @@ type WorkspacePayload = {
   tasks: Task[];
 };
 
+type WorkspaceDoc = {
+  _id: string;
+  tasks: Task[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 const COLLECTION = "assistant_workspace";
 const DOC_ID = "primary";
 
@@ -20,7 +27,8 @@ export async function GET() {
     }
 
     const db = await getMongoDb();
-    const doc = await db.collection(COLLECTION).findOne<{ tasks: Task[] }>({ _id: DOC_ID });
+    const collection = db.collection<WorkspaceDoc>(COLLECTION);
+    const doc = await collection.findOne({ _id: DOC_ID });
 
     return NextResponse.json({
       tasks: Array.isArray(doc?.tasks) ? doc.tasks : [],
@@ -45,7 +53,8 @@ export async function POST(request: Request) {
     }
 
     const db = await getMongoDb();
-    await db.collection(COLLECTION).updateOne(
+    const collection = db.collection<WorkspaceDoc>(COLLECTION);
+    await collection.updateOne(
       { _id: DOC_ID },
       {
         $set: {

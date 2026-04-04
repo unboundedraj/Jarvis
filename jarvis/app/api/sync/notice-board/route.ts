@@ -8,6 +8,13 @@ type NoticeBoardPayload = {
   notes: StickyNote[];
 };
 
+type NoticeBoardDoc = {
+  _id: string;
+  notes: StickyNote[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 const COLLECTION = "assistant_notice_board";
 const DOC_ID = "primary";
 
@@ -20,7 +27,8 @@ export async function GET() {
     }
 
     const db = await getMongoDb();
-    const doc = await db.collection(COLLECTION).findOne<{ notes: StickyNote[] }>({ _id: DOC_ID });
+    const collection = db.collection<NoticeBoardDoc>(COLLECTION);
+    const doc = await collection.findOne({ _id: DOC_ID });
 
     return NextResponse.json({
       notes: Array.isArray(doc?.notes) ? doc.notes : [],
@@ -45,7 +53,8 @@ export async function POST(request: Request) {
     }
 
     const db = await getMongoDb();
-    await db.collection(COLLECTION).updateOne(
+    const collection = db.collection<NoticeBoardDoc>(COLLECTION);
+    await collection.updateOne(
       { _id: DOC_ID },
       {
         $set: {

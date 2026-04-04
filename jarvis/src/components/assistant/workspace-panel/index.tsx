@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useFocusMode } from "@/components/assistant/focus-mode/provider";
 import { orbitron } from "@/lib/fonts";
 import { type Task, type TaskDraft } from "@/types/task";
 import { TaskDialog } from "./task-dialog";
@@ -26,7 +27,20 @@ function parseTags(text: string) {
     .filter(Boolean);
 }
 
+function formatExpectedTime(hours: Task["expectedTimeHours"]) {
+  if (hours === 0.75) {
+    return "45 mins";
+  }
+
+  if (hours === 1) {
+    return "1 hr";
+  }
+
+  return `${hours} hrs`;
+}
+
 export function WorkspacePanel() {
+  const { startFocusMode } = useFocusMode();
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(INITIAL_DRAFT);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -197,6 +211,27 @@ export function WorkspacePanel() {
     setNoteDraft(previousNoteDraft);
   };
 
+  const startTaskFocusMode = (taskId: string) => {
+    const targetTask = tasks.find((task) => task.id === taskId);
+
+    if (!targetTask) {
+      return;
+    }
+
+    startFocusMode({
+      taskName: targetTask.task,
+      deadline: targetTask.deadline,
+      expectedTime: formatExpectedTime(targetTask.expectedTimeHours),
+      tags: targetTask.tags,
+      notes: targetTask.notes.map((note) => note.note).join(" | "),
+      onSessionEnd: async (wasSuccessful) => {
+        if (wasSuccessful) {
+          await completeTask(targetTask.id);
+        }
+      },
+    });
+  };
+
   const syncWorkspace = async () => {
     await syncTasks(tasks);
   };
@@ -234,10 +269,16 @@ export function WorkspacePanel() {
         {syncStatus === "idle" && ""}
       </p>
 
-      <div className="min-h-0 flex-1 space-y-2 overflow-auto pr-1 text-left">
+      <div className="min-h-0 flex-1 space-y-1.5 overflow-auto pr-1 text-left">
         {tasks.length > 0 ? (
           tasks.map((task) => (
-            <TaskRow key={task.id} task={task} onAddNote={openNoteDialog} onComplete={completeTask} />
+            <TaskRow
+              key={task.id}
+              task={task}
+              onAddNote={openNoteDialog}
+              onFocus={startTaskFocusMode}
+              onComplete={completeTask}
+            />
           ))
         ) : (
           <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-border p-4 text-center text-xs uppercase tracking-[0.18em] text-text-soft">
