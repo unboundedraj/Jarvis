@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ASSISTANT_ACCESS_COOKIE, hasAssistantAccess } from "@/lib/assistant-access";
 import { type EnergyLevel } from "@/types/assistant";
-import { type Task } from "@/types/task";
+import { type WorkspaceTask } from "@/types/task";
 
 type PrioritizePayload = {
   about: string;
   energyLevel: EnergyLevel;
   remarks?: string;
-  tasks: Task[];
+  tasks: WorkspaceTask[];
 };
 
 type GroqDecision = {
@@ -17,7 +17,7 @@ type GroqDecision = {
   rationale: string;
 };
 
-function normalizeDecision(decision: GroqDecision, tasks: Task[]) {
+function normalizeDecision(decision: GroqDecision, tasks: WorkspaceTask[]) {
   const taskIds = new Set(tasks.map((task) => task.id));
   const uniqueOrderedTaskIds: string[] = [];
 
@@ -101,9 +101,20 @@ export async function POST(request: Request) {
     }
 
     const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
+    const now = new Date();
 
     const promptPayload = {
-      profileAbout: payload.about,
+      currentTimeIso: now.toISOString(),
+      currentTimeLocale: now.toLocaleString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+      userProfile: {
+        about: payload.about,
+      },
       energyLevel: payload.energyLevel,
       userRemarks: payload.remarks?.trim() || "",
       tasks: payload.tasks.map((task) => ({
@@ -113,15 +124,20 @@ export async function POST(request: Request) {
         expectedTimeHours: task.expectedTimeHours,
         tags: task.tags,
         notes: task.notes.map((note) => note.note),
+        frequency: "frequency" in task ? task.frequency : [],
+        lastCompletedOn: "lastCompletedOn" in task ? task.lastCompletedOn ?? null : null,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
       })),
     };
 
     const systemMessage = [
-      "You are a task-prioritization assistant.",
+      "You are a task-prioritization assistant for one specific person.",
+      "You will receive personal context about the user (about info), their current energy level, current time, and their tasks.",
+      "Use all available signals to decide the optimal task execution order.",
+      "Explicitly factor in: urgency/deadline, energy fit, user profile, current time/day, tags, notes, and repetition context.",
+      "Choose an order that is practical and realistic for right now, not just theoretically important.",
       "Prioritize ethically: do not elevate harmful, deceptive, abusive, or unsafe actions.",
-      "Consider user energy level and urgency.",
       "Respond with strict JSON only and no markdown.",
       "Required shape:",
       '{"orderedTaskIds":["id1","id2"],"recommendedTaskId":"id1","rationale":"short explanation"}',

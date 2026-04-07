@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { orbitron } from "@/lib/fonts";
 import { type EnergyLevel } from "@/types/assistant";
-import { type Task } from "@/types/task";
+import { type RepetitiveTask, type Task } from "@/types/task";
 
 const WORKSPACE_TASKS_REPLACED_EVENT = "workspace:tasks-replaced";
 
@@ -14,6 +14,7 @@ type HeaderStateResponse = {
 
 type WorkspaceStateResponse = {
   tasks?: Task[];
+  repetitiveTasks?: RepetitiveTask[];
 };
 
 type PrioritizeResponse = {
@@ -24,7 +25,7 @@ type PrioritizeResponse = {
   rationale: string;
 };
 
-function sortTasksByOrderedIds(tasks: Task[], orderedTaskIds: string[]) {
+function sortTasksByOrderedIds<T extends { id: string }>(tasks: T[], orderedTaskIds: string[]) {
   const indexById = new Map(orderedTaskIds.map((taskId, index) => [taskId, index]));
 
   return [...tasks].sort((a, b) => {
@@ -32,6 +33,10 @@ function sortTasksByOrderedIds(tasks: Task[], orderedTaskIds: string[]) {
     const bIndex = indexById.get(b.id) ?? Number.MAX_SAFE_INTEGER;
     return aIndex - bIndex;
   });
+}
+
+function isRepetitiveTask(task: Task | RepetitiveTask): task is RepetitiveTask {
+  return "frequency" in task;
 }
 
 export function AiAssistSidebar() {
@@ -57,8 +62,10 @@ export function AiAssistSidebar() {
       const headerData = (await headerResponse.json()) as HeaderStateResponse;
       const workspaceData = (await workspaceResponse.json()) as WorkspaceStateResponse;
       const tasks = Array.isArray(workspaceData.tasks) ? workspaceData.tasks : [];
+      const repetitiveTasks = Array.isArray(workspaceData.repetitiveTasks) ? workspaceData.repetitiveTasks : [];
+      const allWorkspaceTasks: Array<Task | RepetitiveTask> = [...tasks, ...repetitiveTasks];
 
-      if (tasks.length === 0) {
+      if (allWorkspaceTasks.length === 0) {
         throw new Error("Add at least one task in workspace before asking AI Assist.");
       }
 
@@ -69,7 +76,7 @@ export function AiAssistSidebar() {
           about: headerData.about ?? "",
           energyLevel: headerData.energyLevel ?? 5,
           remarks: remarks.trim(),
-          tasks,
+          tasks: allWorkspaceTasks,
         }),
       });
 
@@ -86,19 +93,22 @@ export function AiAssistSidebar() {
       }
 
       const prioritizeData = (await prioritizeResponse.json()) as PrioritizeResponse;
-      const sortedTasks = sortTasksByOrderedIds(tasks, prioritizeData.orderedTaskIds);
+      const sortedAllTasks = sortTasksByOrderedIds(allWorkspaceTasks, prioritizeData.orderedTaskIds);
+      const sortedTasks = sortedAllTasks.filter((task): task is Task => !isRepetitiveTask(task));
+      const sortedRepetitiveTasks = sortedAllTasks.filter((task): task is RepetitiveTask => isRepetitiveTask(task));
 
       const syncResponse = await fetch("/api/sync/workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks: sortedTasks }),
+        body: JSON.stringify({ tasks: sortedTasks, repetitiveTasks: sortedRepetitiveTasks }),
       });
 
       if (!syncResponse.ok) {
         throw new Error("Prioritization worked, but failed to save new task order.");
       }
 
-      const recommendedTask = sortedTasks.find((task) => task.id === prioritizeData.recommendedTaskId) ?? sortedTasks[0];
+      const recommendedTask =
+        sortedAllTasks.find((task) => task.id === prioritizeData.recommendedTaskId) ?? sortedAllTasks[0];
 
       setRecommendation({
         taskName: recommendedTask?.task ?? "No task selected",
@@ -106,13 +116,13 @@ export function AiAssistSidebar() {
       });
 
       window.dispatchEvent(
-        new CustomEvent<{ tasks: Task[] }>(WORKSPACE_TASKS_REPLACED_EVENT, {
-          detail: { tasks: sortedTasks },
+        new CustomEvent<{ tasks: Task[]; repetitiveTasks: RepetitiveTask[] }>(WORKSPACE_TASKS_REPLACED_EVENT, {
+          detail: { tasks: sortedTasks, repetitiveTasks: sortedRepetitiveTasks },
         }),
       );
 
       setStatus("success");
-      setStatusMessage(`Sorted ${sortedTasks.length} tasks with Groq.`);
+      setStatusMessage(`Sorted ${sortedAllTasks.length} tasks with Groq.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to prioritize tasks.";
       setStatus("error");
