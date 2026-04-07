@@ -2,15 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ASSISTANT_ACCESS_COOKIE, hasAssistantAccess } from "@/lib/assistant-access";
 import { getMongoDb } from "@/lib/mongodb";
-import { type Task } from "@/types/task";
+import { type RepetitiveTask, type Task } from "@/types/task";
 
 type WorkspacePayload = {
   tasks: Task[];
+  repetitiveTasks?: RepetitiveTask[];
 };
 
 type WorkspaceDoc = {
   _id: string;
   tasks: Task[];
+  repetitiveTasks: RepetitiveTask[];
   createdAt: string;
   updatedAt: string;
 };
@@ -32,6 +34,7 @@ export async function GET() {
 
     return NextResponse.json({
       tasks: Array.isArray(doc?.tasks) ? doc.tasks : [],
+      repetitiveTasks: Array.isArray(doc?.repetitiveTasks) ? doc.repetitiveTasks : [],
     });
   } catch {
     return NextResponse.json({ message: "Failed to fetch workspace state." }, { status: 500 });
@@ -52,15 +55,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Invalid tasks payload." }, { status: 400 });
     }
 
+    if (payload.repetitiveTasks !== undefined && !Array.isArray(payload.repetitiveTasks)) {
+      return NextResponse.json({ message: "Invalid repetitive tasks payload." }, { status: 400 });
+    }
+
     const db = await getMongoDb();
     const collection = db.collection<WorkspaceDoc>(COLLECTION);
+
+    const nextSet: {
+      tasks: Task[];
+      repetitiveTasks?: RepetitiveTask[];
+      updatedAt: string;
+    } = {
+      tasks: payload.tasks,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (payload.repetitiveTasks !== undefined) {
+      nextSet.repetitiveTasks = payload.repetitiveTasks;
+    }
+
     await collection.updateOne(
       { _id: DOC_ID },
       {
-        $set: {
-          tasks: payload.tasks,
-          updatedAt: new Date().toISOString(),
-        },
+        $set: nextSet,
         $setOnInsert: {
           createdAt: new Date().toISOString(),
         },

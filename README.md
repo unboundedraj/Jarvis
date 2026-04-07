@@ -83,6 +83,20 @@ Task
 	- notes: [{ id, note, createdAt }]
 	- createdAt
 	- updatedAt
+
+RepetitiveTask
+	- id
+	- task
+	- deadline? (optional)
+	- expectedTimeHours (0.5, 0.75 [45 mins], 1, 1.5, 2-7)
+	- tags: string[]
+	- notes: [{ id, note, createdAt }]
+	- frequency: array of any selected schedules from
+		- monday, tuesday, wednesday, thursday, friday, saturday, sunday
+		- monthly-1, monthly-15, monthly-30
+	- lastCompletedOn? (YYYY-MM-DD, local date)
+	- createdAt
+	- updatedAt
 ```
 
 Notes can be added both when creating a task and after a task already exists.
@@ -101,6 +115,7 @@ assistant_header
 assistant_workspace
 	- _id: "primary"
 	- tasks: Task[]
+	- repetitiveTasks: RepetitiveTask[]
 	- createdAt
 	- updatedAt
 
@@ -113,7 +128,17 @@ assistant_notice_board
 
 Each section (`Assistant Header`, `Workspace`, and `Notice Board`) provides an explicit `Sync` action in the UI to persist current local state.
 
+Each section also provides a cloud-download action to fetch server state back into local UI state, which helps prevent accidental overwrites when local state is stale.
+
 Workspace tasks are now auto-saved to MongoDB when they are created, updated with notes, or marked done. The Sync button still exists as a manual fallback.
+
+Workspace repetitive tasks are now supported via the Create Task dialog:
+
+- Toggle: "Make it a repetitive task"
+- Weekday schedule uses tick-boxes (multi-select) for Monday through Sunday
+- Monthly schedule is optional (1st / 15th / 30th)
+- Repetitive tasks are stored in `repetitiveTasks` and rendered in the same workspace list with white background + black text.
+- Marking a repetitive task done does not delete it; it is hidden for the current scheduled day and reappears on its next matching schedule.
 
 ## AI Assist (Groq)
 

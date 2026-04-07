@@ -6,6 +6,21 @@ export type TaskNote = {
 
 export type TaskTag = string;
 
+export type WeekdayFrequency =
+  | "monday"
+  | "tuesday"
+  | "wednesday"
+  | "thursday"
+  | "friday"
+  | "saturday"
+  | "sunday";
+
+export type MonthlyFrequency = "monthly-1" | "monthly-15" | "monthly-30";
+
+export type RepetitiveFrequency =
+  | WeekdayFrequency
+  | MonthlyFrequency;
+
 export type Task = {
   id: string;
   task: string;
@@ -17,10 +32,20 @@ export type Task = {
   updatedAt: string;
 };
 
+export type RepetitiveTask = Task & {
+  frequency: RepetitiveFrequency[];
+  lastCompletedOn?: string;
+};
+
+export type WorkspaceTask = Task | RepetitiveTask;
+
 export type TaskDraft = {
   task: string;
   deadline: string;
   expectedTimeHours: Task["expectedTimeHours"];
   tagsText: string;
   note: string;
+  isRepetitive: boolean;
+  repetitiveWeekdays: WeekdayFrequency[];
+  repetitiveMonthlyFrequency: MonthlyFrequency | "";
 };

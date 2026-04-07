@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useFocusMode } from "@/components/assistant/focus-mode/provider";
 import { orbitron } from "@/lib/fonts";
-import { type Task, type TaskDraft } from "@/types/task";
+import {
+  type RepetitiveFrequency,
+  type RepetitiveTask,
+  type Task,
+  type TaskDraft,
+  type WorkspaceTask,
+} from "@/types/task";
 import { TaskDialog } from "./task-dialog";
 import { TaskNoteDialog } from "./task-note-dialog";
 import { TaskRow } from "./task-row";
@@ -16,7 +22,58 @@ const INITIAL_DRAFT: TaskDraft = {
   expectedTimeHours: 1,
   tagsText: "",
   note: "",
+  isRepetitive: false,
+  repetitiveWeekdays: ["monday"],
+  repetitiveMonthlyFrequency: "",
 };
+
+type WorkspaceStateResponse = {
+  tasks?: Task[];
+  repetitiveTasks?: Array<RepetitiveTask | (Task & { frequency: RepetitiveFrequency })>;
+};
+
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function isRepetitiveTask(task: WorkspaceTask): task is RepetitiveTask {
+  return "frequency" in task;
+}
+
+function normalizeRepetitiveTask(
+  task: RepetitiveTask | (Task & { frequency: RepetitiveFrequency }),
+): RepetitiveTask {
+  const frequency = Array.isArray(task.frequency) ? task.frequency : [task.frequency];
+  return {
+    ...task,
+    frequency,
+  };
+}
+
+function isTaskScheduledForDate(task: RepetitiveTask, date = new Date()) {
+  const dayNameByIndex: Array<
+    "sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday"
+  > = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+  return task.frequency.some((frequency) => {
+    if (frequency === "monthly-1") {
+      return date.getDate() === 1;
+    }
+
+    if (frequency === "monthly-15") {
+      return date.getDate() === 15;
+    }
+
+    if (frequency === "monthly-30") {
+      return date.getDate() === 30;
+    }
+
+    return dayNameByIndex[date.getDay()] === frequency;
+  });
+}
 
 function createId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
@@ -46,6 +103,7 @@ export function WorkspacePanel() {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [taskDraft, setTaskDraft] = useState<TaskDraft>(INITIAL_DRAFT);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [repetitiveTasks, setRepetitiveTasks] = useState<RepetitiveTask[]>([]);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [syncStatus, setSyncStatus] = useState<"idle" | "syncing" | "synced" | "error">("idle");
@@ -58,9 +116,13 @@ export function WorkspacePanel() {
           return;
         }
 
-        const data = (await response.json()) as { tasks?: Task[] };
+        const data = (await response.json()) as WorkspaceStateResponse;
         if (Array.isArray(data.tasks)) {
           setTasks(data.tasks);
+        }
+
+        if (Array.isArray(data.repetitiveTasks)) {
+          setRepetitiveTasks(data.repetitiveTasks.map((task) => normalizeRepetitiveTask(task)));
         }
       } catch {
         // Keep local-first behavior if API is unavailable.
@@ -72,14 +134,17 @@ export function WorkspacePanel() {
 
   useEffect(() => {
     const handleTasksReplaced = (event: Event) => {
-      const customEvent = event as CustomEvent<{ tasks?: Task[] }>;
+      const customEvent = event as CustomEvent<{ tasks?: Task[]; repetitiveTasks?: RepetitiveTask[] }>;
       const nextTasks = customEvent.detail?.tasks;
+      const nextRepetitiveTasks = customEvent.detail?.repetitiveTasks;
 
-      if (!Array.isArray(nextTasks)) {
-        return;
+      if (Array.isArray(nextTasks)) {
+        setTasks(nextTasks);
       }
 
-      setTasks(nextTasks);
+      if (Array.isArray(nextRepetitiveTasks)) {
+        setRepetitiveTasks(nextRepetitiveTasks.map((task) => normalizeRepetitiveTask(task)));
+      }
     };
 
     window.addEventListener(WORKSPACE_TASKS_REPLACED_EVENT, handleTasksReplaced);
@@ -89,9 +154,19 @@ export function WorkspacePanel() {
     };
   }, []);
 
+  const visibleTasks = useMemo(() => {
+    const today = new Date();
+    const todayKey = getLocalDateKey(today);
+    const dueRepetitiveTasks = repetitiveTasks.filter(
+      (task) => isTaskScheduledForDate(task, today) && task.lastCompletedOn !== todayKey,
+    );
+
+    return [...tasks, ...dueRepetitiveTasks].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [tasks, repetitiveTasks]);
+
   const activeTask = useMemo(
-    () => tasks.find((task) => task.id === activeTaskId) ?? null,
-    [activeTaskId, tasks],
+    () => visibleTasks.find((task) => task.id === activeTaskId) ?? null,
+    [activeTaskId, visibleTasks],
   );
 
   const openTaskDialog = () => {
@@ -103,14 +178,14 @@ export function WorkspacePanel() {
     setIsTaskDialogOpen(false);
   };
 
-  const syncTasks = async (nextTasks: Task[]) => {
+  const syncWorkspaceState = async (nextTasks: Task[], nextRepetitiveTasks: RepetitiveTask[]) => {
     setSyncStatus("syncing");
 
     try {
       const response = await fetch("/api/sync/workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tasks: nextTasks }),
+        body: JSON.stringify({ tasks: nextTasks, repetitiveTasks: nextRepetitiveTasks }),
       });
 
       if (!response.ok) {
@@ -131,6 +206,7 @@ export function WorkspacePanel() {
     }
 
     const previousTasks = tasks;
+    const previousRepetitiveTasks = repetitiveTasks;
     const tags = parseTags(taskDraft.tagsText);
     const now = new Date().toISOString();
     const noteText = taskDraft.note.trim();
@@ -154,11 +230,24 @@ export function WorkspacePanel() {
       updatedAt: now,
     };
 
-    const nextTasks = [nextTask, ...previousTasks];
+    const nextTasks = taskDraft.isRepetitive ? previousTasks : [nextTask, ...previousTasks];
+    const selectedFrequencies: RepetitiveFrequency[] = [
+      ...taskDraft.repetitiveWeekdays,
+      ...(taskDraft.repetitiveMonthlyFrequency ? [taskDraft.repetitiveMonthlyFrequency] : []),
+    ];
+
+    if (taskDraft.isRepetitive && selectedFrequencies.length === 0) {
+      return;
+    }
+
+    const nextRepetitiveTasks = taskDraft.isRepetitive
+      ? [{ ...nextTask, frequency: selectedFrequencies }, ...previousRepetitiveTasks]
+      : previousRepetitiveTasks;
 
     setTasks(nextTasks);
+    setRepetitiveTasks(nextRepetitiveTasks);
 
-    const saved = await syncTasks(nextTasks);
+    const saved = await syncWorkspaceState(nextTasks, nextRepetitiveTasks);
 
     if (saved) {
       setIsTaskDialogOpen(false);
@@ -166,6 +255,7 @@ export function WorkspacePanel() {
     }
 
     setTasks(previousTasks);
+    setRepetitiveTasks(previousRepetitiveTasks);
   };
 
   const openNoteDialog = (taskId: string) => {
@@ -184,6 +274,7 @@ export function WorkspacePanel() {
     }
 
     const previousTasks = tasks;
+    const previousRepetitiveTasks = repetitiveTasks;
     const now = new Date().toISOString();
     const newNote = {
       id: createId(),
@@ -196,10 +287,16 @@ export function WorkspacePanel() {
         ? { ...task, notes: [...task.notes, newNote], updatedAt: now }
         : task,
     );
+    const nextRepetitiveTasks = repetitiveTasks.map((task) =>
+      task.id === activeTask.id
+        ? { ...task, notes: [...task.notes, newNote], updatedAt: now }
+        : task,
+    );
 
     setTasks(nextTasks);
+    setRepetitiveTasks(nextRepetitiveTasks);
 
-    const saved = await syncTasks(nextTasks);
+    const saved = await syncWorkspaceState(nextTasks, nextRepetitiveTasks);
 
     if (saved) {
       closeNoteDialog();
@@ -207,17 +304,29 @@ export function WorkspacePanel() {
     }
 
     setTasks(previousTasks);
+    setRepetitiveTasks(previousRepetitiveTasks);
   };
 
   const completeTask = async (taskId: string) => {
     const previousTasks = tasks;
+    const previousRepetitiveTasks = repetitiveTasks;
     const nextTasks = previousTasks.filter((task) => task.id !== taskId);
+    const nextRepetitiveTasks = previousRepetitiveTasks.map((task) =>
+      task.id === taskId
+        ? {
+            ...task,
+            lastCompletedOn: getLocalDateKey(),
+            updatedAt: new Date().toISOString(),
+          }
+        : task,
+    );
     const previousActiveTaskId = activeTaskId;
     const previousNoteDraft = noteDraft;
 
     setTasks(nextTasks);
+    setRepetitiveTasks(nextRepetitiveTasks);
 
-    const saved = await syncTasks(nextTasks);
+    const saved = await syncWorkspaceState(nextTasks, nextRepetitiveTasks);
 
     if (saved) {
       if (previousActiveTaskId === taskId) {
@@ -228,12 +337,13 @@ export function WorkspacePanel() {
     }
 
     setTasks(previousTasks);
+    setRepetitiveTasks(previousRepetitiveTasks);
     setActiveTaskId(previousActiveTaskId);
     setNoteDraft(previousNoteDraft);
   };
 
   const startTaskFocusMode = (taskId: string) => {
-    const targetTask = tasks.find((task) => task.id === taskId);
+    const targetTask = visibleTasks.find((task) => task.id === taskId);
 
     if (!targetTask) {
       return;
@@ -254,7 +364,7 @@ export function WorkspacePanel() {
   };
 
   const syncWorkspace = async () => {
-    await syncTasks(tasks);
+    await syncWorkspaceState(tasks, repetitiveTasks);
   };
 
   const downloadWorkspace = async () => {
@@ -267,13 +377,18 @@ export function WorkspacePanel() {
         throw new Error("Fetch failed");
       }
 
-      const data = (await response.json()) as { tasks?: Task[] };
+      const data = (await response.json()) as WorkspaceStateResponse;
 
       if (!Array.isArray(data.tasks)) {
         throw new Error("Invalid tasks payload");
       }
 
+      if (!Array.isArray(data.repetitiveTasks)) {
+        throw new Error("Invalid repetitive tasks payload");
+      }
+
       setTasks(data.tasks);
+      setRepetitiveTasks(data.repetitiveTasks.map((task) => normalizeRepetitiveTask(task)));
       setSyncStatus("synced");
     } catch {
       setSyncStatus("error");
@@ -326,10 +441,10 @@ export function WorkspacePanel() {
       </p>
 
       <div className="min-h-0 flex-1 space-y-1.5 overflow-auto pr-1 text-left">
-        {tasks.length > 0 ? (
-          tasks.map((task) => (
+        {visibleTasks.length > 0 ? (
+          visibleTasks.map((task) => (
             <TaskRow
-              key={task.id}
+              key={`${task.id}-${isRepetitiveTask(task) ? "habit" : "task"}`}
               task={task}
               onAddNote={openNoteDialog}
               onFocus={startTaskFocusMode}
