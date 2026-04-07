@@ -158,6 +158,27 @@ export function AssistantHeader() {
     }
   };
 
+  const downloadHeaderState = async () => {
+    setSyncStatus("syncing");
+
+    try {
+      const response = await fetch("/api/sync/header", { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error("Fetch failed");
+      }
+
+      const data = (await response.json()) as { about?: string; energyLevel?: EnergyLevel };
+
+      setProfile({ about: data.about ?? "" });
+      setEnergyLevel(data.energyLevel ?? 5);
+      setDraftAbout(data.about ?? "");
+      setSyncStatus("synced");
+    } catch {
+      setSyncStatus("error");
+    }
+  };
+
   return (
     <>
       <header className="relative shrink-0 rounded-2xl border border-border bg-surface p-3 sm:p-4">
@@ -214,6 +235,18 @@ export function AssistantHeader() {
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                 <circle cx="12" cy="12" r="7" />
                 <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={downloadHeaderState}
+              className="inline-flex h-9 w-9 items-center justify-center border border-border text-text-soft transition hover:border-white hover:text-white"
+              aria-label="Download header information from cloud"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path d="M8 17H7a4 4 0 1 1 .8-7.92A5.5 5.5 0 0 1 18.4 10H19a3 3 0 1 1 0 6h-3" />
+                <path d="M12 11v8" />
+                <path d="m8.5 15.5 3.5 3.5 3.5-3.5" />
               </svg>
             </button>
             <button
