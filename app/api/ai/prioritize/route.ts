@@ -7,6 +7,9 @@ import { type WorkspaceTask } from "@/types/task";
 type PrioritizePayload = {
   about: string;
   energyLevel: EnergyLevel;
+  clientTimeIso: string;
+  clientTimeLocale: string;
+  clientTimeZone?: string;
   remarks?: string;
   tasks: WorkspaceTask[];
 };
@@ -85,6 +88,8 @@ export async function POST(request: Request) {
       !Number.isInteger(payload.energyLevel) ||
       payload.energyLevel < 0 ||
       payload.energyLevel > 10 ||
+      typeof payload.clientTimeIso !== "string" ||
+      typeof payload.clientTimeLocale !== "string" ||
       !Array.isArray(payload.tasks)
     ) {
       return NextResponse.json({ message: "Invalid payload." }, { status: 400 });
@@ -101,17 +106,11 @@ export async function POST(request: Request) {
     }
 
     const model = process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile";
-    const now = new Date();
 
     const promptPayload = {
-      currentTimeIso: now.toISOString(),
-      currentTimeLocale: now.toLocaleString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      currentTimeIso: payload.clientTimeIso,
+      currentTimeLocale: payload.clientTimeLocale,
+      currentTimeZone: payload.clientTimeZone?.trim() || "unknown",
       userProfile: {
         about: payload.about,
       },

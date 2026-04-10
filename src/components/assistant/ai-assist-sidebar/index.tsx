@@ -69,12 +69,24 @@ export function AiAssistSidebar() {
         throw new Error("Add at least one task in workspace before asking AI Assist.");
       }
 
+      const clientNow = new Date();
+      const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "unknown";
+
       const prioritizeResponse = await fetch("/api/ai/prioritize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           about: headerData.about ?? "",
           energyLevel: headerData.energyLevel ?? 5,
+          clientTimeIso: clientNow.toISOString(),
+          clientTimeLocale: clientNow.toLocaleString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          clientTimeZone,
           remarks: remarks.trim(),
           tasks: allWorkspaceTasks,
         }),
