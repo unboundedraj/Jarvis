@@ -18,7 +18,7 @@ export default async function AssistantPage() {
   }
 
   return (
-    <main className="mx-auto flex h-dvh w-full max-w-7xl flex-col gap-2 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:px-4 lg:py-4">
+    <main className="flex h-dvh w-full flex-col gap-2 overflow-hidden px-2 py-2 sm:px-3 sm:py-3 lg:px-4 lg:py-4">
       <FocusModeProvider>
         <AssistantHeader />
         <div className="min-h-0 flex-1">
